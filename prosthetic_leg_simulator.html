@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prosthetic Leg Simulator</title>
+<style>
+:root{--bg:#0a1120;--pn:#0f1a30;--bd:#1c2d4d;--tx:#e8eefc;--mu:#8fa3c7;--ac:#2f7bff;--gr:#17c25b;--rd:#e5393f;--or:#ffa91f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.35 Arial,sans-serif}
+.app{display:grid;grid-template-columns:270px minmax(0,1fr) 290px;grid-template-areas:"hd hd hd" "l c r" "ch ch gi";gap:14px;padding:14px;max-width:1500px;margin:auto}
+.pn{background:var(--pn);border:1px solid var(--bd);border-radius:12px;padding:14px;min-width:0}
+h1{font-size:22px;margin:0}h2{font-size:17px;margin:0 0 10px}.sub{color:var(--mu);font-size:13px}
+#hd{grid-area:hd;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ok{background:#12233a;border:1px solid var(--bd);border-radius:8px;padding:8px 14px}.ok:before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--gr);margin-right:8px}
+.row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #15243f}.row b{font-weight:600}.mu{color:var(--mu)}
+.sec{margin:10px 0 4px;font-weight:700;font-size:13px}
+#view{position:relative;height:560px;border-radius:12px;overflow:hidden;border:1px solid var(--bd);cursor:grab}
+#view canvas{display:block}.ov{position:absolute;background:rgba(10,17,32,.78);border:1px solid var(--bd);border-radius:10px;padding:9px 14px}
+.btn{background:#13213b;color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:9px 12px;cursor:pointer;font:inherit}
+.btn.on{background:var(--ac);border-color:var(--ac)}.btn:hover{filter:brightness(1.15)}
+.act{display:block;width:100%;text-align:left;margin-bottom:7px}
+.start{background:var(--gr);border-color:var(--gr);font-weight:700}.stop{background:var(--rd);border-color:var(--rd);font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.three{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.met{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.big{font-size:26px;font-weight:700;color:var(--gr)}
+label{display:block;margin:10px 0 4px}input[type=range]{width:100%;accent-color:var(--ac)}.v{float:right;background:#13213b;border:1px solid var(--bd);border-radius:6px;padding:0 8px}
+canvas.ch{width:100%;height:190px;display:block}.leg{width:100%}
+.foot{color:var(--mu);font-size:12px;margin-top:8px}
+#hdl{grid-area:hd}#l{grid-area:l}#c{grid-area:c}#r{grid-area:r}#chs{grid-area:ch}#gi{grid-area:gi}
+@media(max-width:1000px){.app{grid-template-columns:1fr;grid-template-areas:"hd" "c" "r" "l" "ch" "gi"}#view{height:420px}.two{grid-template-columns:1fr}.met{grid-template-columns:1fr 1fr}}
+</style></head><body>
+<div class="app">
+ <div class="pn" id="hd"><div><h1>🦿 Prosthetic Leg Simulator</h1><div class="sub">3D human motion simulation with model-based control · two-link Lagrangian prosthesis</div></div><div class="ok">System Ready</div></div>
+
+ <div id="l"><div class="pn"><h2>Human Leg</h2>
+  <div class="sec">Length (cm)</div><div class="row"><span>Thigh</span><b>45.2</b></div><div class="row"><span>Shin</span><b>43.1</b></div><div class="row"><span>Foot</span><b>25.0</b></div>
+  <div class="sec">Joint angles (°)</div><div class="row"><span>Hip</span><b id="hh">0</b></div><div class="row"><span>Knee</span><b id="hk">0</b></div><div class="row"><span>Ankle</span><b id="ha">0</b></div></div>
+  <div class="pn" style="margin-top:14px"><h2>Prosthetic Leg</h2>
+  <div class="sec">Length (cm)</div><div class="row"><span>Thigh</span><b>45.0</b></div><div class="row"><span>Shin</span><b>42.8</b></div><div class="row"><span>Foot</span><b>24.8</b></div>
+  <div class="sec">Joint angles (°)</div><div class="row"><span>Hip</span><b id="ph">0</b></div><div class="row"><span>Knee</span><b id="pk">0</b></div><div class="row"><span>Ankle</span><b id="pa">0</b></div>
+  <div class="sec">Comparison (ratio)</div><div class="row"><span>Thigh</span><b>0.99</b></div><div class="row"><span>Shin</span><b>0.99</b></div><div class="row"><span>Foot</span><b>0.99</b></div></div></div>
+
+ <div id="c"><div id="view">
+   <div class="ov" style="left:12px;top:12px;font-size:17px"><span class="mu">Activity:</span> <b id="actname">Running</b></div>
+   <div class="ov" style="right:12px;top:12px">Speed: <b id="spd">0</b> m/s<br>Time: <b id="tm">0</b> s</div>
+   <div class="ov" style="left:50%;bottom:12px;transform:translateX(-50%);padding:6px"><button class="btn" data-v="front">Front</button> <button class="btn on" data-v="side">Side</button> <button class="btn" data-v="back">Back</button></div></div>
+  <div class="pn met"><div><b class="mu">Tracking error (rad)</b><div class="row"><span>Hip</span><b id="eh">0</b></div><div class="row"><span>Knee</span><b id="ek">0</b></div></div>
+   <div><b class="mu">Control torque (Nm)</b><div class="row"><span>Hip</span><b id="th">0</b></div><div class="row"><span>Knee</span><b id="tk">0</b></div></div>
+   <div><b class="mu">Energy (J)</b><div class="row"><span>Total</span><b id="en">0</b></div><div class="row"><span>Mean power (W)</span><b id="pw">0</b></div></div>
+   <div><b class="mu">Constraint violation</b><div class="big" id="cv">0%</div></div></div></div>
+
+ <div id="r"><div class="pn"><h2>Activity Selection</h2>
+   <button class="btn act" data-a="walking">🚶 Walking</button><button class="btn act" data-a="jogging">🏃 Jogging</button><button class="btn act on" data-a="running">🏃‍♂️ Running</button>
+   <button class="btn act" data-a="stairsup">🪜 Stairs Up</button><button class="btn act" data-a="stairsdown">⬇️ Stairs Down</button>
+   <div class="two"><button class="btn start" id="go">▶ Start</button><button class="btn stop" id="stop">■ Stop</button></div></div>
+  <div class="pn" style="margin-top:14px"><h2>Advanced Settings</h2>
+   <div id="simctl"><label>Gait frequency (Hz) <span class="v" id="fv">1.4</span></label><input type="range" id="fr" min=".5" max="2" step=".05" value="1.4">
+   <label>Sensor noise (°) <span class="v" id="nv">0.3</span></label><input type="range" id="ns" min="0" max="2" step=".1" value=".3">
+   <label>Disturbance</label><input type="radio" name="d" value="none" checked> None &nbsp; <input type="radio" name="d" value="pulse"> Pulse
+   </div><label>Controller</label><div id="cbox"><input type="radio" name="c" value="pid"> PID &nbsp; <input type="radio" name="c" value="mpc" checked> MPC*</div><div id="simctl2">
+   <label>MPC horizon (N) <span class="v" id="hv">15</span></label><input type="range" id="hz" min="5" max="30" step="1" value="15">
+   <div class="foot">*Browser preview: model-based predictive controller. Exact QP-MPC results come from the Python app.</div></div></div>
+  <div class="pn" style="margin-top:14px"><h2>Camera Control</h2><div class="three"><button class="btn" id="rs">Reset</button><button class="btn" id="zi">Zoom In</button><button class="btn" id="zo">Zoom Out</button></div></div></div>
+
+ <div id="chs" class="two"><div class="pn"><h2>Hip Angle (°) <span class="sub" style="float:right"><span style="color:#3b82f6">- - Desired</span> &nbsp;<span style="color:var(--or)">— Actual</span></span></h2><canvas class="ch" id="c1"></canvas></div>
+  <div class="pn"><h2>Knee Angle (°) <span class="sub" style="float:right"><span style="color:#3b82f6">- - Desired</span> &nbsp;<span style="color:var(--or)">— Actual</span></span></h2><canvas class="ch" id="c2"></canvas></div></div>
+ <div id="gi" class="pn"><h2>Gait Cycle Info</h2><div class="row"><span class="mu">Number of strides</span><b id="gs">0</b></div><div class="row"><span class="mu">Stride peak CV</span><b id="gc">–</b></div><div class="row"><span class="mu">Gait distance (m)</span><b id="gd">0</b></div><div class="row"><span class="mu">Current step</span><b id="gp">–</b></div></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=i=>document.getElementById(i),T=THREE,D2R=Math.PI/180;
+/* ---------- activities (periodic hip/knee references, phase 0..1) ---------- */
+const ACT={walking:{n:'Walking',f:.9,h0:.05,hA:.30,kc:.15,kp:1.0,v:1.2,lean:.03,arm:.5,elb:.4},
+ jogging:{n:'Jogging',f:1.15,h0:.12,hA:.40,kc:.25,kp:1.35,v:2.5,lean:.10,arm:.8,elb:1.0},
+ running:{n:'Running',f:1.4,h0:.15,hA:.50,kc:.35,kp:1.6,v:3.5,lean:.17,arm:1.1,elb:1.4},
+ stairsup:{n:'Stairs Up',f:.7,h0:.45,hA:.35,kc:.20,kp:1.5,v:.5,lean:.12,arm:.4,elb:.5},
+ stairsdown:{n:'Stairs Down',f:.7,h0:.10,hA:.30,kc:.50,kp:1.1,v:.5,lean:.05,arm:.3,elb:.4}};
+const bump=(p,c,w)=>{const d=(((p-c+.5)%1)+1)%1-.5;return Math.exp(-.5*(d/w)**2)};
+const ref=(p,A)=>[A.h0+A.hA*Math.cos(6.2832*(p-.03)),-(.02+A.kc*bump(p,.15,.06)+A.kp*bump(p,.72,.1))];
+/* ---------- Lagrangian two-link prosthesis (same model as the Python project) ---------- */
+const P0={m1:7,m2:4,l1:.45,l2:.45,c1:.2,c2:.2},PN=P0,PL={...P0,m1:8.75,m2:5},G9=9.81,UMAX=[100,70],QMIN=[-.7,-1.9],QMAX=[.95,.03];
+function MCG(p,q,qd){const I1=p.m1*p.l1**2/12,I2=p.m2*p.l2**2/12,a=p.m2*p.l1*p.c2*Math.cos(q[1]),m12=p.m2*p.c2**2+a+I2;
+ const M=[[p.m1*p.c1**2+p.m2*(p.l1**2+p.c2**2)+2*a+I1+I2,m12],[m12,p.m2*p.c2**2+I2]],h=-p.m2*p.l1*p.c2*Math.sin(q[1]),s=Math.sin(q[0]+q[1]);
+ return{M,C:[h*(2*qd[0]*qd[1]+qd[1]**2),-h*qd[0]**2],G:[(p.m1*p.c1+p.m2*p.l1)*G9*Math.sin(q[0])+p.m2*p.c2*G9*s,p.m2*p.c2*G9*s]}}
+const slv=(M,b)=>{const d=M[0][0]*M[1][1]-M[0][1]*M[1][0];return[(b[0]*M[1][1]-M[0][1]*b[1])/d,(M[0][0]*b[1]-M[1][0]*b[0])/d]};
+const clampU=u=>[Math.max(-UMAX[0],Math.min(UMAX[0],u[0])),Math.max(-UMAX[1],Math.min(UMAX[1],u[1]))];
+const randn=()=>Math.sqrt(-2*Math.log(Math.random()+1e-12))*Math.cos(6.2832*Math.random());
+/* ---------- state ---------- */
+let act='running',A=ACT.running,running=true,t=0,phi=0,fHz=1.4,q,qd,u=[0,0],dh=[0,0],I=[0,0],xp=null,up=[0,0],ctrl='mpc',N=15,noise=.3,pulse=false;
+let dist=0,E=0,viol=0,steps=0,e2=[0,0],u2=[0,0],strides=0,peaks=[],minq=0,hist=[],lastS=0;
+function reset(){t=0;phi=0;const r=ref(-.5,A);q=[r[0]-.03,r[1]+.03];qd=[0,0];u=[0,0];dh=[0,0];I=[0,0];xp=null;dist=0;E=0;viol=0;steps=0;e2=[0,0];u2=[0,0];strides=0;peaks=[];minq=0;hist=[];lastS=0}
+reset();
+function control(){ // runs at 50 Hz
+ const pr=phi-.5,r=ref(pr,A),d=.002,rp=ref(pr+d*fHz,A),rm=ref(pr-d*fHz,A);
+ const qr=r,qdr=[0,1].map(i=>(rp[i]-rm[i])/(2*d)),qddr=[0,1].map(i=>(rp[i]-2*r[i]+rm[i])/(d*d));
+ const qm=[q[0]+noise*D2R*randn(),q[1]+noise*D2R*randn()],qdm=[qd[0]+noise*D2R*3*randn(),qd[1]+noise*D2R*3*randn()];
+ const e=[qr[0]-qm[0],qr[1]-qm[1]],ed=[qdr[0]-qdm[0],qdr[1]-qdm[1]],n=MCG(PN,qm,qdm);let uc;
+ if(ctrl==='pid'){I=[I[0]+e[0]*.02,I[1]+e[1]*.02];uc=[n.G[0]+120*e[0]+12*ed[0]+25*I[0],n.G[1]+60*e[1]+3.5*ed[1]+12*I[1]]}
+ else{ // model-based predictive: inverse dynamics + disturbance estimator, preview gains grow with horizon
+  if(xp){const pn=MCG(PN,xp[0],xp[1]),tt=[up[0]+dh[0],up[1]+dh[1]],a=slv(pn.M,[tt[0]-pn.C[0]-pn.G[0],tt[1]-pn.C[1]-pn.G[1]]);
+   const rv=[qdm[0]-(xp[1][0]+a[0]*.02),qdm[1]-(xp[1][1]+a[1]*.02)],c=slv([[1,0],[0,1]],rv),Mr=[n.M[0][0]*c[0]+n.M[0][1]*c[1],n.M[1][0]*c[0]+n.M[1][1]*c[1]];
+   dh=[Math.max(-40,Math.min(40,dh[0]+.4*Mr[0]/.02)),Math.max(-40,Math.min(40,dh[1]+.4*Mr[1]/.02))]}
+  const wn=10+N*.9,kp=wn*wn,kd=2*wn,ac=[qddr[0]+kd*ed[0]+kp*e[0],qddr[1]+kd*ed[1]+kp*e[1]];
+  uc=[n.M[0][0]*ac[0]+n.M[0][1]*ac[1]+n.C[0]+n.G[0]-dh[0],n.M[1][0]*ac[0]+n.M[1][1]*ac[1]+n.C[1]+n.G[1]-dh[1]]}
+ u=clampU(uc);xp=[qm,qdm];up=u;return{qr,e}}
+function plant(dt){
+ const dsb=pulse&&(t%3)<.15?[20,40]:[0,0],p=MCG(PL,q,qd),a=slv(p.M,[u[0]+dsb[0]-p.C[0]-p.G[0]-1.5*qd[0],u[1]+dsb[1]-p.C[1]-p.G[1]-1.5*qd[1]]);
+ qd=[qd[0]+a[0]*dt,qd[1]+a[1]*dt];q=[q[0]+qd[0]*dt,q[1]+qd[1]*dt];t+=dt;phi+=fHz*dt;dist+=A.v*(fHz/A.f)*dt;
+ E+=Math.max(0,u[0]*qd[0])*dt+Math.max(0,u[1]*qd[1])*dt}
+const SD=window.SIM_DATA||null;let idx=0;
+function resetPB(){idx=0;t=0;phi=0;E=0;viol=0;steps=0;e2=[0,0];u2=[0,0];strides=0;peaks=[];minq=0;hist=[];lastS=0;dist=0}
+if(SD){A=ACT[SD.act];fHz=1/SD.Tg;ctrl=SD.names.includes('MPC')?'MPC':SD.names[0];q=SD.d[ctrl].q[0];
+ $('simctl').style.display='none';$('simctl2').style.display='none';
+ $('cbox').innerHTML=SD.names.map(n=>'<label style="margin:6px 0"><input type="radio" name="c" value="'+n+'"'+(n===ctrl?' checked':'')+'> '+n+'</label>').join('')+'<div class="foot">Playing back the Python simulation. Activity and parameters are set in the Streamlit sidebar.</div>';
+ document.querySelectorAll('[data-a]').forEach(b=>{b.disabled=true;b.style.opacity=.55;b.classList.toggle('on',b.dataset.a===SD.act)});$('actname').textContent=A.n}
+function pbStep(){idx++;if(idx>=SD.n)resetPB();const d=SD.d[ctrl],Ts=SD.Ts;q=d.q[idx];u=d.u[idx];t=idx*Ts;phi=t/SD.Tg;dist+=A.v*Ts;
+ E+=(Math.max(0,u[0]*d.qd[idx][0])+Math.max(0,u[1]*d.qd[idx][1]))*Ts;steps++;viol+=(q[0]<SD.qmin[0]||q[0]>SD.qmax[0]||q[1]<SD.qmin[1]||q[1]>SD.qmax[1])?1:0;minq=Math.min(minq,q[1]);
+ if(Math.floor(phi)>lastS){lastS=Math.floor(phi);strides++;peaks.push(-minq);minq=0}
+ const r=SD.qref[idx],e=[r[0]-q[0],r[1]-q[1]];e2=[e2[0]+(e[0]**2-e2[0])*.01,e2[1]+(e[1]**2-e2[1])*.01];u2=[u2[0]+(u[0]**2-u2[0])*.01,u2[1]+(u[1]**2-u2[1])*.01];
+ hist.push({t,dsr:r,act:q});if(hist.length>620)hist.shift()}
+/* ---------- 3D scene ---------- */
+const view=$('view'),scene=new T.Scene();scene.background=new T.Color(0x9cc7ea);scene.fog=new T.Fog(0x9cc7ea,14,70);
+const cam=new T.PerspectiveCamera(38,1,.1,200),ren=new T.WebGLRenderer({antialias:true});ren.shadowMap.enabled=true;ren.setPixelRatio(Math.min(devicePixelRatio,2));view.appendChild(ren.domElement);
+scene.add(new T.HemisphereLight(0xffffff,0x557744,.95));const sun=new T.DirectionalLight(0xffffff,.9);sun.position.set(3,6,4);sun.castShadow=true;Object.assign(sun.shadow.camera,{left:-3,right:3,top:3,bottom:-3});sun.shadow.mapSize.set(1024,1024);scene.add(sun);
+const mat=(c,m=0,r=.7)=>new T.MeshStandardMaterial({color:c,metalness:m,roughness:r}),cyl=(a,b,h)=>new T.CylinderGeometry(a,b,h,22),box=(x,y,z)=>new T.BoxGeometry(x,y,z);
+const mesh=(g,m,p,par,sh=true)=>{const o=new T.Mesh(g,m);o.position.set(...p);o.castShadow=sh;o.receiveShadow=!sh;par&&par.add(o);return o};
+const road=mesh(new T.PlaneGeometry(300,7),mat(0x3b3f46,0,.9),[0,0,0],scene,false);road.rotation.x=-1.5708;
+[-1,1].forEach(s=>{const g=mesh(new T.PlaneGeometry(300,60),mat(0x4f8a3c,0,1),[0,-.01,s*33.5],scene,false);g.rotation.x=-1.5708});
+const scroll=[];for(let i=0;i<14;i++){const m=mesh(box(1.2,.01,.12),mat(0xf2f2f2),[0,.006,0],scene,false);scroll.push({o:m,x:i*3,L:42})}
+for(let i=0;i<16;i++){const s=i%2?1:-1,z=s*(5+Math.random()*5),g=new T.Group();g.position.z=z;mesh(cyl(.12,.15,1.2),mat(0x5a3d22),[0,.6,0],g);mesh(new T.ConeGeometry(.9,2.6,14),mat(0x2f6b34),[0,2.3,0],g);scene.add(g);scroll.push({o:g,x:i*2.9,L:46,tree:1})}
+[[-30,-60,22],[10,-70,30],[50,-65,20]].forEach(([x,z,h])=>mesh(new T.ConeGeometry(h*.9,h*2,6),mat(0x6d7f93),[x,h,z],scene,false));
+const root=new T.Group();scene.add(root);
+function leg(pros,z){const hip=new T.Group(),kn=new T.Group(),an=new T.Group();hip.position.z=z;kn.position.y=-.45;an.position.y=-.45;hip.add(kn);kn.add(an);
+ if(pros){mesh(cyl(.088,.06,.45),mat(0x15181d,.5,.35),[0,-.225,0],hip);const j=mesh(cyl(.05,.05,.13),mat(0x9aa4b2,.9,.25),[0,0,0],kn);j.rotation.x=1.5708;mesh(new T.TorusGeometry(.056,.011,8,24),mat(0x2f7bff,.3,.4),[0,0,.07],kn);mesh(cyl(.026,.026,.45),mat(0xb8c0cc,.9,.2),[0,-.225,0],kn);mesh(box(.27,.035,.09),mat(0x14161a,.3,.4),[.07,-.05,0],an);mesh(box(.12,.02,.09),mat(0x2f7bff),[.0,-.02,0],an)}
+ else{mesh(cyl(.075,.055,.45),mat(0xd9a07c),[0,-.225,0],hip);mesh(cyl(.092,.082,.22),mat(0x15171c),[0,-.11,0],hip);mesh(cyl(.055,.04,.45),mat(0xd9a07c),[0,-.225,0],kn);mesh(new T.SphereGeometry(.058,14,12),mat(0xd9a07c),[0,0,0],kn);mesh(box(.27,.07,.1),mat(0xeeeeee),[.07,-.04,0],an)}
+ root.add(hip);return{hip,kn,an}}
+const LP=leg(true,.1),LH=leg(false,-.1),tr=new T.Group();root.add(tr);
+mesh(box(.2,.13,.3),mat(0x15171c),[0,.02,0],tr);const torso=mesh(cyl(.17,.13,.58),mat(0x3a3f47),[0,.36,0],tr);torso.scale.z=1.35;mesh(new T.SphereGeometry(.1,16,14),mat(0xd9a07c),[0,.76,0],tr);mesh(cyl(.04,.045,.1),mat(0xd9a07c),[0,.67,0],tr);mesh(new T.SphereGeometry(.115,18,16),mat(0xd9a07c),[.01,.84,0],tr);
+function arm(z){const s=new T.Group(),e=new T.Group();s.position.set(0,.6,z);e.position.y=-.3;s.add(e);tr.add(s);mesh(cyl(.045,.04,.3),mat(0x3a3f47),[0,-.15,0],s);mesh(cyl(.038,.03,.28),mat(0xd9a07c),[0,-.14,0],e);mesh(new T.SphereGeometry(.04,10,10),mat(0xd9a07c),[0,-.29,0],e);return{s,e}}
+const AP=arm(.22),AH=arm(-.22);
+/* camera (drag = orbit) */
+let az=1.5708,el=.12,rad=3.4;const tgt=new T.Vector3(0,.95,0),VW={front:0,side:1.5708,back:3.1416};
+function setCam(){cam.position.set(tgt.x+rad*Math.cos(el)*Math.cos(az),tgt.y+rad*Math.sin(el),tgt.z+rad*Math.cos(el)*Math.sin(az));cam.lookAt(tgt)}
+let drag=null;view.onpointerdown=e=>{drag=[e.clientX,e.clientY]};addEventListener('pointerup',()=>drag=null);
+addEventListener('pointermove',e=>{if(!drag)return;az-=(e.clientX-drag[0])*.007;el=Math.max(-.1,Math.min(1.2,el+(e.clientY-drag[1])*.005));drag=[e.clientX,e.clientY]});
+view.onwheel=e=>{rad=Math.max(1.5,Math.min(8,rad+e.deltaY*.003));e.preventDefault()};
+document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{az=VW[b.dataset.v];el=.12;document.querySelectorAll('[data-v]').forEach(x=>x.classList.toggle('on',x===b))});
+$('rs').onclick=()=>{az=1.5708;el=.12;rad=3.4};$('zi').onclick=()=>rad=Math.max(1.5,rad-.5);$('zo').onclick=()=>rad=Math.min(8,rad+.5);
+function resize(){const w=view.clientWidth,h=view.clientHeight;ren.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix();['c1','c2'].forEach(i=>{const c=$(i),d=devicePixelRatio||1;c.width=c.clientWidth*d;c.height=c.clientHeight*d})}
+new ResizeObserver(resize).observe(view);addEventListener('resize',resize);
+/* ---------- UI ---------- */
+document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{act=b.dataset.a;A=ACT[act];fHz=A.f;$('fr').value=fHz;$('fv').textContent=fHz.toFixed(2);$('actname').textContent=A.n;document.querySelectorAll('[data-a]').forEach(x=>x.classList.toggle('on',x===b))});
+$('go').onclick=()=>running=true;$('stop').onclick=()=>{running=false;SD?resetPB():reset()};
+$('fr').oninput=e=>{fHz=+e.target.value;$('fv').textContent=fHz.toFixed(2)};$('ns').oninput=e=>{noise=+e.target.value;$('nv').textContent=noise.toFixed(1)};$('hz').oninput=e=>{N=+e.target.value;$('hv').textContent=N};
+document.querySelectorAll('[name=d]').forEach(r=>r.onchange=()=>pulse=r.value==='pulse'&&r.checked);document.querySelectorAll('[name=c]').forEach(r=>r.onchange=()=>{if(r.checked){ctrl=r.value;dh=[0,0];I=[0,0];if(SD)resetPB()}});
+/* ---------- charts ---------- */
+function chart(id,k,lo,hi,sgn){const c=$(id),x=c.getContext('2d'),W=c.width,H=c.height,d=devicePixelRatio||1,L=38*d,B=22*d,pw=W-L-8*d,ph=H-B-8*d;x.clearRect(0,0,W,H);x.font=11*d+'px Arial';x.fillStyle='#8fa3c7';x.strokeStyle='#1c2d4d';x.lineWidth=1;
+ const Y=v=>8*d+ph*(1-(v-lo)/(hi-lo));for(let v=lo;v<=hi;v+=(hi-lo)/4){x.beginPath();x.moveTo(L,Y(v));x.lineTo(W-8*d,Y(v));x.stroke();x.fillText(Math.round(v),4*d,Y(v)+4*d)}
+ const t1=hist.length?hist[hist.length-1].t:12,t0=t1-12,X=tt=>L+pw*(tt-t0)/12;for(let s=Math.ceil(t0/2)*2;s<=t1;s+=2)x.fillText(s,X(s)-4*d,H-6*d);
+ [['dsr','#3b82f6',[6*d,5*d]],['act',' #ffa91f',[]]].forEach(([n,col,dash])=>{x.beginPath();x.setLineDash(dash);x.strokeStyle=col.trim();x.lineWidth=2*d;let f=1;hist.forEach(h=>{if(h.t<t0)return;const px=X(h.t),py=Y(h[n][k]*sgn/D2R);f?(x.moveTo(px,py),f=0):x.lineTo(px,py)});x.stroke();x.setLineDash([])})}
+/* ---------- main loop ---------- */
+let last=null,acc=0,hAcc=0;
+function frame(ts){requestAnimationFrame(frame);const dtF=last?Math.min(.05,(ts-last)/1000):0;last=ts;let info=null;
+ if(SD&&running){acc+=dtF;while(acc>=.02){acc-=.02;pbStep()}}
+ if(running&&!SD){acc+=dtF;while(acc>=.005){if(Math.round(t/.005)%4===0)info=control()||info;plant(.005);acc-=.005;steps++;
+   const o=q[0]<QMIN[0]||q[0]>QMAX[0]||q[1]<QMIN[1]||q[1]>QMAX[1];viol+=o?1:0;minq=Math.min(minq,q[1]);
+   if(Math.floor(phi)>lastS){lastS=Math.floor(phi);strides++;peaks.push(-minq);minq=0}}
+  hAcc+=dtF;if(hAcc>=.02){hAcc=0;const r=ref(phi-.5,A);hist.push({t,dsr:r,act:[q[0],q[1]]});if(hist.length>620)hist.shift();
+   const e=[r[0]-q[0],r[1]-q[1]],k=.02/2;e2=[e2[0]+(e[0]**2-e2[0])*k,e2[1]+(e[1]**2-e2[1])*k];u2=[u2[0]+(u[0]**2-u2[0])*k,u2[1]+(u[1]**2-u2[1])*k]}}
+ const fr=SD?acc/.02:0,L2=(a,b)=>[a[0]+(b[0]-a[0])*fr,a[1]+(b[1]-a[1])*fr],i1=SD?(idx+1)%SD.n:0,hr=SD?L2(SD.healthy[idx],SD.healthy[i1]):ref(phi,A),pq=SD?L2(SD.d[ctrl].q[idx],SD.d[ctrl].q[i1]):q,hv=l=>l[0]*0+Math.cos(l[0])*.45+Math.cos(l[0]+l[1])*.45;
+ const py=Math.max(hv(hr),hv(pq))+.08;root.position.y=py;tr.rotation.z=-A.lean;
+ const setLeg=(L,qq)=>{L.hip.rotation.z=qq[0];L.kn.rotation.z=qq[1];const h=py-hv(qq)-.08,s=.3+.7*Math.exp(-Math.max(0,h)/.04);L.an.rotation.z=(1-s)*.12-(qq[0]+qq[1]);return L.an.rotation.z*-1*0+((1-s)*.12-(qq[0]+qq[1]))};
+ const rp=setLeg(LP,pq),rh=setLeg(LH,hr);
+ AP.s.rotation.z=-(hr[0]-A.h0)*A.arm*1.4;AH.s.rotation.z=-(pq[0]-A.h0)*A.arm*1.4;AP.e.rotation.z=AH.e.rotation.z=A.elb;
+ const dd=A.v*(fHz/A.f);scroll.forEach(s=>{const m=((s.x-dist)%s.L+s.L)%s.L-s.L/2;s.o.position.x=m});
+ setCam();ren.render(scene,cam);
+ $('hh').textContent=(hr[0]/D2R).toFixed(1);$('hk').textContent=(-hr[1]/D2R).toFixed(1);$('ha').textContent=(rh/D2R).toFixed(1);
+ $('ph').textContent=(pq[0]/D2R).toFixed(1);$('pk').textContent=(-pq[1]/D2R).toFixed(1);$('pa').textContent=(rp/D2R).toFixed(1);
+ $('spd').textContent=dd.toFixed(1);$('tm').textContent=t.toFixed(1);$('eh').textContent=Math.sqrt(e2[0]).toFixed(2);$('ek').textContent=Math.sqrt(e2[1]).toFixed(2);
+ $('th').textContent=Math.sqrt(u2[0]).toFixed(1);$('tk').textContent=Math.sqrt(u2[1]).toFixed(1);$('en').textContent=E.toFixed(1);$('pw').textContent=(E/Math.max(t,.1)).toFixed(1);
+ const vp=steps?100*viol/steps:0;$('cv').textContent=vp.toFixed(1)+'%';$('cv').style.color=vp<5?'var(--gr)':'var(--rd)';
+ $('gs').textContent=strides;if(peaks.length>2){const m=peaks.reduce((a,b)=>a+b)/peaks.length,sd=Math.sqrt(peaks.reduce((a,b)=>a+(b-m)**2,0)/peaks.length);$('gc').textContent=(100*sd/m).toFixed(1)+'%'}
+ $('gd').textContent=dist.toFixed(1);$('gp').textContent=((phi-.5)%1+1)%1<.5?'Right (prosthesis)':'Left (healthy)';
+ chart('c1',0,-60,60,1);chart('c2',1,-30,90,-1)}
+resize();setCam();requestAnimationFrame(frame);
+</script></body></html>
